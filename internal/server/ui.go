@@ -1,120 +1,33 @@
 package server
 
 var dashboardHTML = []byte(`<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Stockyard Pasture</title>
-<style>
-  :root {
-    --bg: #1a1410;
-    --surface: #241c15;
-    --border: #3d2e1e;
-    --rust: #c4622d;
-    --leather: #8b5e3c;
-    --cream: #f5e6c8;
-    --muted: #7a6550;
-    --text: #e8d5b0;
-  }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace, sans-serif; min-height: 100vh; }
-  header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 1rem 2rem; display: flex; align-items: center; gap: 1rem; }
-  .logo { color: var(--rust); font-size: 1.25rem; font-weight: 700; letter-spacing: 0.05em; }
-  .badge { background: var(--rust); color: var(--cream); font-size: 0.65rem; padding: 0.2rem 0.5rem; border-radius: 3px; font-weight: 600; text-transform: uppercase; }
-  main { max-width: 960px; margin: 2rem auto; padding: 0 2rem; }
-  .hero { text-align: center; padding: 3rem 0 2rem; }
-  .hero h1 { font-size: 2rem; color: var(--cream); margin-bottom: 0.5rem; }
-  .hero p { color: var(--muted); font-size: 0.95rem; max-width: 480px; margin: 0 auto; }
-  .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin: 2rem 0; }
-  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.25rem; text-align: center; }
-  .stat-value { font-size: 1.75rem; font-weight: 700; color: var(--rust); }
-  .stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 0.25rem; text-transform: uppercase; letter-spacing: 0.05em; }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 1.5rem; margin-bottom: 1rem; }
-  .card h2 { font-size: 1rem; color: var(--cream); margin-bottom: 1rem; }
-  .tier-box { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
-  .tier { background: var(--bg); border: 1px solid var(--border); border-radius: 4px; padding: 1rem; }
-  .tier.pro { border-color: var(--rust); }
-  .tier-name { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 0.5rem; }
-  .tier.pro .tier-name { color: var(--rust); }
-  .tier-desc { font-size: 0.85rem; color: var(--text); }
-  .tier-price { font-size: 0.8rem; color: var(--leather); margin-top: 0.5rem; }
-  footer { text-align: center; padding: 2rem; color: var(--muted); font-size: 0.75rem; }
-  footer a { color: var(--leather); text-decoration: none; }
-  .endpoint-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
-  .endpoint-table th { text-align: left; color: var(--muted); padding: 0.5rem; border-bottom: 1px solid var(--border); }
-  .endpoint-table td { padding: 0.5rem; border-bottom: 1px solid var(--border); color: var(--text); }
-  .method { color: var(--rust); font-weight: 600; }
-</style>
-</head>
+<html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>Stockyard Pasture</title><style>:root{--bg:#1a1410;--surface:#241c15;--border:#3d2e1e;--rust:#c4622d;--cream:#f5e6c8;--muted:#7a6550;--text:#e8d5b0}*{box-sizing:border-box;margin:0;padding:0}body{background:var(--bg);color:var(--text);font-family:'JetBrains Mono',monospace,sans-serif}header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem;display:flex;align-items:center;gap:1rem}.logo{color:var(--rust);font-size:1.25rem;font-weight:700}.badge{background:var(--rust);color:var(--cream);font-size:0.65rem;padding:0.2rem 0.5rem;border-radius:3px;font-weight:600;text-transform:uppercase}main{max-width:1100px;margin:0 auto;padding:2rem}.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;margin-bottom:2rem}.stat{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.25rem;text-align:center}.stat-value{font-size:1.75rem;font-weight:700;color:var(--rust)}.stat-label{font-size:0.75rem;color:var(--muted);margin-top:0.25rem;text-transform:uppercase;letter-spacing:0.05em}.layout{display:grid;grid-template-columns:260px 1fr;gap:1rem}.card{background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:1.5rem}.card h2{font-size:0.85rem;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:1rem}.form-row{display:flex;gap:0.5rem;margin-bottom:0.75rem;flex-wrap:wrap}select,input{background:var(--bg);border:1px solid var(--border);color:var(--text);padding:0.5rem 0.75rem;border-radius:4px;font-family:inherit;font-size:0.85rem;flex:1}.btn{background:var(--rust);color:var(--cream);border:none;padding:0.5rem 1rem;border-radius:4px;cursor:pointer;font-family:inherit;font-size:0.85rem;font-weight:600}.btn:hover{opacity:0.85}.btn-sm{padding:0.25rem 0.6rem;font-size:0.75rem}.btn-danger{background:#7a2020}.btn-outline{background:transparent;border:1px solid var(--rust);color:var(--rust)}.env-item{padding:0.6rem 0.75rem;border-radius:4px;cursor:pointer;font-size:0.85rem;margin-bottom:0.25rem;display:flex;justify-content:space-between;align-items:center}.env-item:hover,.env-item.active{background:rgba(196,98,45,0.15)}.env-item.active{border-left:3px solid var(--rust)}.var-row{display:grid;grid-template-columns:1fr 1fr auto;gap:0.5rem;align-items:center;padding:0.4rem 0;border-bottom:1px solid var(--border);font-size:0.82rem}.var-key{color:var(--cream);font-weight:600}.var-val{color:var(--muted);font-family:monospace}.empty{color:var(--muted);font-size:0.85rem;padding:1rem 0;text-align:center}</style></head>
 <body>
-<header>
-  <span class="logo">⬡ Stockyard</span>
-  <span style="color:var(--muted);">/</span>
-  <span style="color:var(--cream);font-weight:600;">Pasture</span>
-  <span class="badge">v0.1.0</span>
-</header>
+<header><span class="logo">&#x2B21; Stockyard</span><span style="color:var(--muted)">/</span><span style="color:var(--cream);font-weight:600">Pasture</span><span class="badge">Environments</span></header>
 <main>
-  <div class="hero">
-    <h1>Pasture</h1>
-    <p>Bookmark manager with full-text search — save links, tag them, search the page content</p>
-  </div>
-  <div class="stats">
-    <div class="stat">
-      <div class="stat-value" id="stat-items">—</div>
-      <div class="stat-label">Total Items</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value">9200</div>
-      <div class="stat-label">Port</div>
-    </div>
-    <div class="stat">
-      <div class="stat-value" id="stat-tier">—</div>
-      <div class="stat-label">Tier</div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>Tier &amp; Limits</h2>
-    <div class="tier-box">
-      <div class="tier">
-        <div class="tier-name">Free</div>
-        <div class="tier-desc">100 bookmarks</div>
-        <div class="tier-price">$0/mo</div>
-      </div>
-      <div class="tier pro">
-        <div class="tier-name">Pro</div>
-        <div class="tier-desc">Unlimited bookmarks</div>
-        <div class="tier-price">$2.99/mo</div>
-      </div>
-    </div>
-  </div>
-  <div class="card">
-    <h2>API Endpoints</h2>
-    <table class="endpoint-table">
-      <thead><tr><th>Method</th><th>Path</th><th>Description</th></tr></thead>
-      <tbody>
-        <tr><td class="method">GET</td><td>/health</td><td>Health check</td></tr>
-        <tr><td class="method">GET</td><td>/api/version</td><td>Version info</td></tr>
-        <tr><td class="method">GET</td><td>/api/limits</td><td>Current tier limits</td></tr>
-        <tr><td class="method">GET</td><td>/api/items</td><td>List items</td></tr>
-        <tr><td class="method">POST</td><td>/api/items</td><td>Create item</td></tr>
-        <tr><td class="method">GET</td><td>/api/items/{id}</td><td>Get item</td></tr>
-        <tr><td class="method">PUT</td><td>/api/items/{id}</td><td>Update item</td></tr>
-        <tr><td class="method">DELETE</td><td>/api/items/{id}</td><td>Delete item</td></tr>
-      </tbody>
-    </table>
-  </div>
+<div class="stats"><div class="stat"><div class="stat-value" id="s1">0</div><div class="stat-label">Environments</div></div><div class="stat"><div class="stat-value" id="s2">0</div><div class="stat-label">Total Vars</div></div><div class="stat"><div class="stat-value" id="s3">FREE</div><div class="stat-label">Tier</div></div></div>
+<div class="layout">
+<div class="card">
+<h2>Environments</h2>
+<div class="form-row"><input id="f-ename" placeholder="Name (e.g. production)"><button class="btn btn-sm" onclick="addEnv()">+</button></div>
+<div id="env-list"><div class="empty">No environments</div></div>
+</div>
+<div class="card" id="vars-card">
+<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem"><h2 style="margin:0">Variables: <span id="cur-env-name" style="color:var(--cream)">—</span></h2><a id="export-btn" href="#" class="btn btn-sm btn-outline" style="display:none">Export .env</a></div>
+<div class="form-row"><input id="f-vkey" placeholder="KEY"><input id="f-vval" placeholder="value"><label style="display:flex;align-items:center;gap:0.3rem;white-space:nowrap;flex:0"><input id="f-vsens" type="checkbox" style="flex:0;width:auto"> sensitive</label><button class="btn btn-sm" onclick="setVar()">Set</button></div>
+<div id="var-list"><div class="empty">Select an environment</div></div>
+</div>
+</div>
 </main>
-<footer>
-  <a href="https://stockyard.dev">stockyard.dev</a> &mdash; Operations & Teams &mdash; Apache 2.0
-</footer>
 <script>
-fetch('/api/limits').then(r=>r.json()).then(d=>{
-  document.getElementById('stat-tier').textContent = d.tier.toUpperCase();
-});
-fetch('/api/items').then(r=>r.json()).then(d=>{
-  document.getElementById('stat-items').textContent = Array.isArray(d) ? d.length : '0';
-});
-</script>
-</body>
-</html>`)
+var curEnv=null;
+function load(){fetch('/api/stats').then(function(r){return r.json()}).then(function(d){document.getElementById('s2').textContent=d.vars||0})}
+function loadEnvs(){fetch('/api/environments').then(function(r){return r.json()}).then(function(list){document.getElementById('s1').textContent=list.length;var el=document.getElementById('env-list');el.innerHTML=list.length?list.map(function(e){return'<div class="env-item'+(curEnv===e.id?' active':'')+'" onclick="selectEnv('+e.id+',\''+e.name+'\')"><span>'+e.name+'</span><span style="color:var(--muted);font-size:0.75rem">'+e.var_count+' vars &nbsp;<button class="btn btn-sm btn-danger" onclick="event.stopPropagation();delEnv('+e.id+')">x</button></span></div>'}).join(''):'<div class="empty">No environments</div>'})}
+function selectEnv(id,name){curEnv=id;document.getElementById('cur-env-name').textContent=name;var eb=document.getElementById('export-btn');eb.href='/api/environments/'+id+'/export';eb.style.display='inline-block';loadVars(id);loadEnvs()}
+function loadVars(id){fetch('/api/environments/'+id+'/vars').then(function(r){return r.json()}).then(function(list){var el=document.getElementById('var-list');el.innerHTML=list.length?list.map(function(v){return'<div class="var-row"><span class="var-key">'+v.key+'</span><span class="var-val">'+(v.sensitive?'<span style="color:var(--muted)">***</span>':v.value)+'</span><button class="btn btn-sm btn-danger" onclick="delVar('+v.id+')">x</button></div>'}).join(''):'<div class="empty">No variables yet</div>';load()})}
+function addEnv(){var n=document.getElementById('f-ename').value.trim();if(!n)return;fetch('/api/environments',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:n,slug:n.toLowerCase().replace(/[^a-z0-9-]/g,'-')})}).then(function(){document.getElementById('f-ename').value='';loadEnvs()})}
+function delEnv(id){if(curEnv===id){curEnv=null;document.getElementById('cur-env-name').textContent='--';document.getElementById('var-list').innerHTML='<div class="empty">Select an environment</div>'};fetch('/api/environments/'+id,{method:'DELETE'}).then(function(){loadEnvs();load()})}
+function setVar(){if(!curEnv)return;var d={key:document.getElementById('f-vkey').value.trim(),value:document.getElementById('f-vval').value,sensitive:document.getElementById('f-vsens').checked};if(!d.key)return;fetch('/api/environments/'+curEnv+'/vars',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(d)}).then(function(){document.getElementById('f-vkey').value='';document.getElementById('f-vval').value='';document.getElementById('f-vsens').checked=false;loadVars(curEnv)})}
+function delVar(id){fetch('/api/vars/'+id,{method:'DELETE'}).then(function(){if(curEnv)loadVars(curEnv);load()})}
+load();loadEnvs();
+</script></body></html>`)
