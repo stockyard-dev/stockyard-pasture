@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  pasture:
+    build: .
+    ports:
+      - "9200:9200"
+    environment:
+      - PORT=9200
+      - DATA_DIR=/data
+      - PASTURE_LICENSE_KEY=
+    volumes:
+      - pasture_data:/data
+    restart: unless-stopped
+volumes:
+  pasture_data:
