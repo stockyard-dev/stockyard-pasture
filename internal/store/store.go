@@ -1,15 +1,23 @@
 package store
-import("database/sql";"fmt";"os";"path/filepath";"time";_ "modernc.org/sqlite")
-type DB struct{*sql.DB}
-type Environment struct{ID int64 `json:"id"`;Name string `json:"name"`;Slug string `json:"slug"`;Description string `json:"description"`;VarCount int `json:"var_count,omitempty"`;CreatedAt time.Time `json:"created_at"`}
-type EnvVar struct{ID int64 `json:"id"`;EnvID int64 `json:"env_id"`;EnvName string `json:"env_name,omitempty"`;Key string `json:"key"`;Value string `json:"value"`;Sensitive bool `json:"sensitive"`;CreatedAt time.Time `json:"created_at"`}
-func Open(dataDir string)(*DB,error){if err:=os.MkdirAll(dataDir,0755);err!=nil{return nil,fmt.Errorf("mkdir: %w",err)};dsn:=filepath.Join(dataDir,"pasture.db")+"?_journal_mode=WAL&_busy_timeout=5000";db,err:=sql.Open("sqlite",dsn);if err!=nil{return nil,fmt.Errorf("open: %w",err)};db.SetMaxOpenConns(1);if err:=migrate(db);err!=nil{return nil,fmt.Errorf("migrate: %w",err)};return &DB{db},nil}
-func migrate(db *sql.DB)error{_,err:=db.Exec(`CREATE TABLE IF NOT EXISTS environments(id INTEGER PRIMARY KEY AUTOINCREMENT,name TEXT NOT NULL,slug TEXT NOT NULL UNIQUE,description TEXT DEFAULT '',created_at DATETIME DEFAULT CURRENT_TIMESTAMP);CREATE TABLE IF NOT EXISTS env_vars(id INTEGER PRIMARY KEY AUTOINCREMENT,env_id INTEGER NOT NULL,key TEXT NOT NULL,value TEXT DEFAULT '',sensitive INTEGER DEFAULT 0,created_at DATETIME DEFAULT CURRENT_TIMESTAMP,UNIQUE(env_id,key));`);return err}
-func(db *DB)ListEnvironments()([]Environment,error){rows,err:=db.Query(`SELECT e.id,e.name,e.slug,e.description,COUNT(v.id),e.created_at FROM environments e LEFT JOIN env_vars v ON v.env_id=e.id GROUP BY e.id ORDER BY e.name`);if err!=nil{return nil,err};defer rows.Close();var out[]Environment;for rows.Next(){var e Environment;rows.Scan(&e.ID,&e.Name,&e.Slug,&e.Description,&e.VarCount,&e.CreatedAt);out=append(out,e)};return out,nil}
-func(db *DB)CreateEnvironment(e *Environment)error{if e.Slug==""{e.Slug=e.Name};res,err:=db.Exec(`INSERT INTO environments(name,slug,description)VALUES(?,?,?)`,e.Name,e.Slug,e.Description);if err!=nil{return err};e.ID,_=res.LastInsertId();return nil}
-func(db *DB)DeleteEnvironment(id int64)error{_,err:=db.Exec(`DELETE FROM environments WHERE id=?`,id);_,_=db.Exec(`DELETE FROM env_vars WHERE env_id=?`,id);return err}
-func(db *DB)ListVars(envID int64)([]EnvVar,error){rows,err:=db.Query(`SELECT v.id,v.env_id,COALESCE(e.name,''),v.key,v.value,v.sensitive,v.created_at FROM env_vars v LEFT JOIN environments e ON e.id=v.env_id WHERE v.env_id=? ORDER BY v.key`,envID);if err!=nil{return nil,err};defer rows.Close();var out[]EnvVar;for rows.Next(){var v EnvVar;var sens int;rows.Scan(&v.ID,&v.EnvID,&v.EnvName,&v.Key,&v.Value,&sens,&v.CreatedAt);v.Sensitive=sens==1;if v.Sensitive{v.Value="***"};out=append(out,v)};return out,nil}
-func(db *DB)SetVar(v *EnvVar)error{var sens int;if v.Sensitive{sens=1};_,err:=db.Exec(`INSERT INTO env_vars(env_id,key,value,sensitive)VALUES(?,?,?,?) ON CONFLICT(env_id,key) DO UPDATE SET value=excluded.value,sensitive=excluded.sensitive`,v.EnvID,v.Key,v.Value,sens);return err}
-func(db *DB)DeleteVar(id int64)error{_,err:=db.Exec(`DELETE FROM env_vars WHERE id=?`,id);return err}
-func(db *DB)ExportVars(envID int64)([]EnvVar,error){rows,err:=db.Query(`SELECT id,env_id,'',key,value,sensitive,created_at FROM env_vars WHERE env_id=? ORDER BY key`,envID);if err!=nil{return nil,err};defer rows.Close();var out[]EnvVar;for rows.Next(){var v EnvVar;var sens int;rows.Scan(&v.ID,&v.EnvID,&v.EnvName,&v.Key,&v.Value,&sens,&v.CreatedAt);v.Sensitive=sens==1;out=append(out,v)};return out,nil}
-func(db *DB)CountVars()(int,error){var n int;db.QueryRow(`SELECT COUNT(*) FROM env_vars`).Scan(&n);return n,nil}
+import ("database/sql";"fmt";"os";"path/filepath";"time";_ "modernc.org/sqlite")
+type DB struct{db *sql.DB}
+type Post struct{ID string `json:"id"`;Title string `json:"title"`;Body string `json:"body,omitempty"`;Platform string `json:"platform,omitempty"`;Status string `json:"status"`;ScheduledAt string `json:"scheduled_at,omitempty"`;PublishedAt string `json:"published_at,omitempty"`;Tags string `json:"tags,omitempty"`;CreatedAt string `json:"created_at"`}
+func Open(d string)(*DB,error){if err:=os.MkdirAll(d,0755);err!=nil{return nil,err};db,err:=sql.Open("sqlite",filepath.Join(d,"pasture.db")+"?_journal_mode=WAL&_busy_timeout=5000");if err!=nil{return nil,err}
+db.Exec(`CREATE TABLE IF NOT EXISTS posts(id TEXT PRIMARY KEY,title TEXT NOT NULL,body TEXT DEFAULT '',platform TEXT DEFAULT '',status TEXT DEFAULT 'draft',scheduled_at TEXT DEFAULT '',published_at TEXT DEFAULT '',tags TEXT DEFAULT '',created_at TEXT DEFAULT(datetime('now')))`)
+db.Exec(`CREATE INDEX IF NOT EXISTS idx_posts_status ON posts(status)`)
+db.Exec(`CREATE INDEX IF NOT EXISTS idx_posts_sched ON posts(scheduled_at)`)
+return &DB{db:db},nil}
+func(d *DB)Close()error{return d.db.Close()}
+func genID()string{return fmt.Sprintf("%d",time.Now().UnixNano())}
+func now()string{return time.Now().UTC().Format(time.RFC3339)}
+func(d *DB)Create(p *Post)error{p.ID=genID();p.CreatedAt=now();if p.Status==""{p.Status="draft"}
+_,err:=d.db.Exec(`INSERT INTO posts VALUES(?,?,?,?,?,?,?,?,?)`,p.ID,p.Title,p.Body,p.Platform,p.Status,p.ScheduledAt,p.PublishedAt,p.Tags,p.CreatedAt);return err}
+func(d *DB)Get(id string)*Post{var p Post;if d.db.QueryRow(`SELECT * FROM posts WHERE id=?`,id).Scan(&p.ID,&p.Title,&p.Body,&p.Platform,&p.Status,&p.ScheduledAt,&p.PublishedAt,&p.Tags,&p.CreatedAt)!=nil{return nil};return &p}
+func(d *DB)List(status string)[]Post{q:=`SELECT * FROM posts`;args:=[]any{};if status!=""&&status!="all"{q+=` WHERE status=?`;args=append(args,status)};q+=` ORDER BY CASE status WHEN 'scheduled' THEN 0 WHEN 'draft' THEN 1 WHEN 'published' THEN 2 END, scheduled_at ASC, created_at DESC`
+rows,_:=d.db.Query(q,args...);if rows==nil{return nil};defer rows.Close()
+var o []Post;for rows.Next(){var p Post;rows.Scan(&p.ID,&p.Title,&p.Body,&p.Platform,&p.Status,&p.ScheduledAt,&p.PublishedAt,&p.Tags,&p.CreatedAt);o=append(o,p)};return o}
+func(d *DB)Update(id string,p *Post)error{_,err:=d.db.Exec(`UPDATE posts SET title=?,body=?,platform=?,status=?,scheduled_at=?,tags=? WHERE id=?`,p.Title,p.Body,p.Platform,p.Status,p.ScheduledAt,p.Tags,id);return err}
+func(d *DB)Publish(id string)error{_,err:=d.db.Exec(`UPDATE posts SET status='published',published_at=? WHERE id=?`,now(),id);return err}
+func(d *DB)Delete(id string)error{_,err:=d.db.Exec(`DELETE FROM posts WHERE id=?`,id);return err}
+type Stats struct{Total int `json:"total"`;Draft int `json:"draft"`;Scheduled int `json:"scheduled"`;Published int `json:"published"`}
+func(d *DB)Stats()Stats{var s Stats;d.db.QueryRow(`SELECT COUNT(*) FROM posts`).Scan(&s.Total);d.db.QueryRow(`SELECT COUNT(*) FROM posts WHERE status='draft'`).Scan(&s.Draft);d.db.QueryRow(`SELECT COUNT(*) FROM posts WHERE status='scheduled'`).Scan(&s.Scheduled);d.db.QueryRow(`SELECT COUNT(*) FROM posts WHERE status='published'`).Scan(&s.Published);return s}
